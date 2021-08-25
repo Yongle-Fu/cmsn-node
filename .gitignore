@@ -84,6 +84,3 @@ typings/
 # DynamoDB Local files
 .dynamodb/
 
-# Crimson clib dependency
-cmsn.js
-cmsn.wasm
