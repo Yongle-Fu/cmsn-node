@@ -4,7 +4,7 @@ const { textDecoder } = require('./cmsn_utils');
 const { CONNECTIVITY, CMSNError, BLE_UUID } = require("./cmsn_common");
 const debug = require('debug');
 const log = debug('cmsn');
-const logV = log.extend('verbose:ble');
+const logD = log.extend('debug:ble');
 const logI = log.extend('info:ble');
 const logW = log.extend('warn:ble');
 const logE = log.extend('error:ble');
@@ -24,13 +24,14 @@ class CMSNBleAdapter {
 
     initAdapter(listener) {
         if (!listener) return;
+        const that = this;
         node_ble.on('stateChange', state => {
             logI('ble state change to', state);
             if (state === 'poweredOn') {
-                this.available = true;
+                that.available = true;
                 if (listener.onAdapterAvailable) listener.onAdapterAvailable();
             } else {
-                this.available = false;
+                that.available = false;
                 if (listener.onError) listener.onError(CMSNError.enum('ble_power_off'));
             }
         });
@@ -86,7 +87,7 @@ class CMSNBleAdapter {
             this.logMessage(peripheral.name, 'discoverServices...');
             try {
                 const services = await this.discoverServices(peripheral);
-                logV('services', services);
+                logD('services', services);
                 for (let service of services) {
                     const characteristics = await this.getCharacteristics(peripheral, service);
                     await this.onDiscoverCharacteristics(peripheral, characteristics);
@@ -177,7 +178,7 @@ class CMSNBleAdapter {
                 this.logWarn(peripheral.name, 'device state changed to ' + peripheral.state);
                 return;
             }
-            logV(peripheral.name, '>> Characteristic: ' + characteristic);
+            logD(peripheral.name, '>> Characteristic: ' + characteristic);
             switch (characteristic.uuid.toUpperCase()) {
             case BLE_UUID.CHARACTERISTIC_UUID_DATA_STREAM_WRITE:
                 peripheral.dataStreamCharacteristicWrite = characteristic;
@@ -344,7 +345,7 @@ class CMSNBleAdapter {
                     } 
                     */
 
-                    logV(`Discovered [${p.name}] addressType=${p.addressType} address=${p.address} rssi=${p.rssi} batteryLevel=${p.batteryLevel} isInPairingMode=${p.isInPairingMode}`);
+                    logD(`Discovered [${p.name}] addressType=${p.addressType} address=${p.address} rssi=${p.rssi} batteryLevel=${p.batteryLevel} isInPairingMode=${p.isInPairingMode}`);
                     if (CMSNBleAdapter.onFoundDevcie) CMSNBleAdapter.onFoundDevcie(p);
                 }
             }

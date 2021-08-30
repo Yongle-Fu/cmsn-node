@@ -1,3 +1,4 @@
+/* eslint-disable require-atomic-updates */
 const loadWasm = require('./cmsn');
 const { hexToRGB, sleep } = require('./cmsn_utils');
 const EventEmitter = require('events');
@@ -5,7 +6,7 @@ const { CMSNBleAdapter } = require('./cmsn_ble');
 const { CMD, CONNECTIVITY, CONTACT_STATE, IMU, CMSNError, CMSNLogLevel } = require('./cmsn_common');
 const debug = require('debug');
 const log = debug('cmsn');
-const logV = log.extend('verbose');
+const logD = log.extend('debug');
 const logI = log.extend('info');
 const logW = log.extend('warn');
 const logE = log.extend('error');
@@ -35,7 +36,7 @@ class CrimsonSDK extends EventEmitter {
             onConfigResp: (msgId, success, error) => {
                 const cb = msgCallbackMap.get(msgId);
                 if (cb) cb(success, error);
-                logV(`onConfigResp, msgId=${msgId}, success=${success}, error=${error}`);
+                logD(`onConfigResp, msgId=${msgId}, success=${success}, error=${error}`);
             },
             onSysInfoResp: (msgId, sysInfo, error) => {
                 const cb = sysInfoCallbackMap.get(msgId);
@@ -44,7 +45,7 @@ class CrimsonSDK extends EventEmitter {
             onLeadOff: (deviceId, center, side) => {
                 const device = deviceMap.get(deviceId);
                 if (device) {
-                    logV(`onLeadOff, center=${center}, side=${side}`);
+                    logD(`onLeadOff, center=${center}, side=${side}`);
                 } else {
                     logE(`${deviceId} unavailable`);
                 }
@@ -99,7 +100,7 @@ class CrimsonSDK extends EventEmitter {
                 }
             },
             onAttention: (deviceId, value) => {
-                logV('onAttention-----', value);
+                logD('onAttention-----', value);
                 const device = deviceMap.get(deviceId);
                 if (device) {
                     if (device.listener && device.listener.onAttention) device.listener.onAttention(device, value);
@@ -108,7 +109,7 @@ class CrimsonSDK extends EventEmitter {
                 }
             },
             onMeditation: (deviceId, value) => {
-                logV('onMeditation-----', value);
+                logD('onMeditation-----', value);
                 const device = deviceMap.get(deviceId);
                 if (device) {
                     if (device.listener && device.listener.onMeditation) device.listener.onMeditation(device, value);
@@ -117,7 +118,7 @@ class CrimsonSDK extends EventEmitter {
                 }
             },
             onSocialEngagement: (deviceId, value) => {
-                logV('onSocialEngagement-----', value);
+                logD('onSocialEngagement-----', value);
                 const device = deviceMap.get(deviceId);
                 if (device) {
                     if (device.listener && device.listener.onSocialEngagement) device.listener.onSocialEngagement(device, value);
@@ -167,7 +168,7 @@ class CrimsonSDK extends EventEmitter {
         if (level >= 0 && level < 4) {
             libcmsn.cmsn_set_log_level(level);
 
-            const log_level_arr = ['verbose', 'info', 'warn', 'error'];
+            const log_level_arr = ['debug', 'info', 'warn', 'error'];
             const cmsn_log_namespaces = log_level_arr.slice(level).map(e => `cmsn:${e}*`).join(',');
             var namespaces = debug.namespaces;
             if (namespaces) debug.enable(`${namespaces}, ${cmsn_log_namespaces}`);
@@ -177,7 +178,7 @@ class CrimsonSDK extends EventEmitter {
             debug.disable();
             libcmsn.cmsn_set_log_level(CMSNLogLevel.enum('none'));
         }
-        // logV.log = console.debug.bind(console);
+        // logD.log = console.debug.bind(console);
         // logI.log = console.info.bind(console);
         // logW.log = console.warn.bind(console);
         // logE.log = console.error.bind(console);
@@ -302,6 +303,10 @@ class CMSNDevice {
         logE(`[ERROR] [${this.name}]`, message);
     }
 
+    get description() {
+        return `${this.name}], id=${this.id}, isInPairingMode=${this.isInPairingMode}, rssi=${this.rssi}, batteryLevel=${this.batteryLevel}`;
+    }
+
     /**
      * @param {CONNECTIVITY} connectivity
      */
@@ -337,9 +342,16 @@ class CMSNDevice {
     get isInPairingMode() {
         return this.peripheral ? this.peripheral.isInPairingMode : false;
     }
+    set isInPairingMode(mode) {
+        if (this.peripheral) this.peripheral.isInPairingMode = mode;
+    }
 
     get batteryLevel() {
         return this.peripheral ? this.peripheral.batteryLevel : -1;
+    }
+
+    get rssi() {
+        return this.peripheral ? this.peripheral.rssi : -1;
     }
 
     get pairUuid() {
@@ -368,12 +380,11 @@ class CMSNDevice {
 
             const that = this;
             this.peripheral.onReceiveData = (buffer) => {
-                // logV('onReceiveData');
-                if (that.paired) {
-                    logI('onReceiveData', buffer.length);
-                    logI(buffer);
-                    return;
-                }
+                // if (that.paired) {
+                //     logD('onReceiveData', buffer.length);
+                //     logD('onReceiveData', buffer);
+                //     return;
+                // }
                 libcmsn.cmsn_did_receive_data(that.devicePtr, buffer, buffer.length);
             };
             this.peripheral.onConnectivityChanged = (connectivity) => {
@@ -498,14 +509,14 @@ class CMSNDevice {
         const leadOffOption = AFE.LEAD_OFF_OPTION.enum(enabled ? 'ac' : 'dc_6na');
         const data = libcmsn.cmsn_config_afe_pack(msgId, sampleRate, dataChannel, rldChannel, leadOffChannel, leadOffOption);
         await this.writeData(data);
-        logV('send afe config, sampleRate:', AFE.SAMPLE_RATE(sampleRate));
-        logV('dataChannel:', AFE.CHANNEL(dataChannel));
-        logV('rldChannel:', AFE.CHANNEL(rldChannel));
-        logV('leadOffChannel:', AFE.CHANNEL(leadOffChannel));
-        logV('leadOffOption:', AFE.LEAD_OFF_OPTION(leadOffOption));
+        logD('send afe config, sampleRate:', AFE.SAMPLE_RATE(sampleRate));
+        logD('dataChannel:', AFE.CHANNEL(dataChannel));
+        logD('rldChannel:', AFE.CHANNEL(rldChannel));
+        logD('leadOffChannel:', AFE.CHANNEL(leadOffChannel));
+        logD('leadOffOption:', AFE.LEAD_OFF_OPTION(leadOffOption));
         
         libcmsn.cmsn_set_impedance_test_mode(this.devicePtr, enabled);
-        logV('setImpedanceTestMode', enabled);
+        logD('setImpedanceTestMode', enabled);
         if (cb) msgCallbackMap.set(msgId, cb);
     } */
 
