@@ -5,7 +5,7 @@
   "main": "index.js",
   "author": "se@brainco.tech",
   "dependencies": {
-    "cmsn-noble": "^3.0.7",
+    "cmsn-noble": "3.1.4",
     "debug": "^4.3.2"
   },
   "devDependencies": {
