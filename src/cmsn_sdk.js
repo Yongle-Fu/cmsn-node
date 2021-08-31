@@ -3,7 +3,7 @@ const loadWasm = require('./cmsn');
 const { hexToRGB, sleep } = require('./cmsn_utils');
 const EventEmitter = require('events');
 const { CMSNBleAdapter } = require('./cmsn_ble');
-const { CMD, CONNECTIVITY, CONTACT_STATE, IMU, CMSNError, CMSNLogLevel } = require('./cmsn_common');
+const { CMD, CONNECTIVITY, CONTACT_STATE, AFE, IMU, CMSNError, CMSNLogLevel } = require('./cmsn_common');
 const debug = require('debug');
 const log = debug('cmsn');
 const logD = log.extend('debug');
@@ -142,9 +142,11 @@ class CrimsonSDK extends EventEmitter {
         libcmsn.cmsn_set_led_color_pack = libcmsn.cwrap('em_set_led_color_pack', 'number', ['number', 'number', 'number', 'number']);
         libcmsn.cmsn_set_sleep_pack = libcmsn.cwrap('em_set_sleep_pack', 'number', ['number', 'number']);
         libcmsn.cmsn_set_vibration_pack = libcmsn.cwrap('em_set_vibration_pack', 'number', ['number', 'number']);
+        libcmsn.cmsn_enable_impedance_test = libcmsn.cwrap('em_enable_impedance_test', 'null', ['number', 'boolean']);
+        libcmsn.cmsn_enable_filters = libcmsn.cwrap('em_enable_filters', 'null', ['number', 'boolean']);
         libcmsn.cmsn_set_data_subscription = libcmsn.cwrap('em_set_data_subscription', 'number', ['number', 'boolean', 'boolean', 'boolean']);
         libcmsn.cmsn_set_log_level = libcmsn.cwrap('em_set_log_level', 'number', ['number']);
-
+        
         if (logLevel) this.setLogLevel(logLevel);
         await cmsnSDK.initAdapter(useDongle);
 
@@ -495,10 +497,18 @@ class CMSNDevice {
         libcmsn.cmsn_set_data_subscription(this.devicePtr, enableAttention == true, enableMeditation == true, enableSocial == true);
     }
 
-    /*
-    async setImpedanceTestMode(enabled, cb) {
+    async enableFilters(enabled) {
         if (!this.devicePtr) {
-            logE('setImpedanceTestMode, while devicePtr == null');
+            logE('cmsn_enable_filters, while devicePtr == null');
+            return;
+        }
+        libcmsn.cmsn_enable_filters(this.devicePtr, enabled);
+        logD('cmsn_enable_filters', enabled);
+    }
+
+    async enableImpedanceTest(enabled, cb) {
+        if (!this.devicePtr) {
+            logE('enableImpedanceTest, while devicePtr == null');
             return;
         }
         const msgId = libcmsn.cmsn_gen_msg_id();
@@ -515,10 +525,10 @@ class CMSNDevice {
         logD('leadOffChannel:', AFE.CHANNEL(leadOffChannel));
         logD('leadOffOption:', AFE.LEAD_OFF_OPTION(leadOffOption));
         
-        libcmsn.cmsn_set_impedance_test_mode(this.devicePtr, enabled);
-        logD('setImpedanceTestMode', enabled);
+        libcmsn.cmsn_enable_impedance_test(this.devicePtr, enabled);
+        logD('cmsn_enable_impedance_test', enabled);
         if (cb) msgCallbackMap.set(msgId, cb);
-    } */
+    }
 
     async startIMU(sampleRate, cb) {
         if (!this.isConnected) {
